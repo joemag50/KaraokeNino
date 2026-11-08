@@ -1,0 +1,9 @@
+title: KaraokeNino
+description: Rockola de karaoke y música sin internet para rentar en fiestas
+theme: jekyll-theme-cayman
+lang: es
+plugins:
+  - jekyll-relative-links
+relative_links:
+  enabled: true
+  collections: false

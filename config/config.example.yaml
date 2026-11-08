@@ -1,0 +1,103 @@
+# KaraokeNino — configuración de la rockola.
+# Copia este archivo a config/config.yaml (install.sh lo hace solo).
+# Todo lo que no pongas aquí usa el valor por defecto.
+
+fullscreen: true
+
+# Colores: moderno, boda, infantil, xv.
+# También se cambia desde el menú de administrador.
+theme: "moderno"
+
+catalog_db: "data/catalog.db"
+state_file: "data/state.json"
+log_file: "data/logs/karaokenino.log"
+
+mpv_path: "mpv"
+# Opciones extra de mpv, por ejemplo salida de audio HDMI o video por hardware:
+# mpv_args: ["--hwdec=auto", "--audio-device=alsa/hdmi"]
+mpv_args: []
+
+# false en la rockola. true = probar sin disco ni mpv.
+demo_mode: false
+
+library:
+  # Dónde buscar el disco de música, en orden.
+  roots:
+    - "/media/usb/master.1000"
+  # Si no está ahí, se busca una carpeta con este nombre en estos lugares
+  # (sirve aunque el disco se monte como /media/usuario/ETIQUETA/master.1000).
+  dir_name: "master.1000"
+  search_in: ["/media", "/mnt", "/run/media"]
+  # Segundos que se espera al disco al encender (las USB tardan en montarse).
+  wait_seconds: 60
+  # Prefijo de Windows de las rutas en Musica.data (se quita al importar).
+  windows_root: 'D:\master.1000'
+  # Montar solo (de lectura) los discos sin montar para buscar la carpeta
+  # (Puppy no monta nada al encender). Necesita root o udisks.
+  auto_mount: true
+  # Revisar el disco en cada encendido (lento con 1 TB). Normalmente se hace
+  # desde el admin («Re-escanear disco») después de copiar canciones; si el
+  # catálogo está vacío se revisa solo.
+  scan_on_start: false
+
+playback:
+  volume: 80              # volumen la primera vez (después recuerda el último)
+  max_volume: 100         # tope para invitados (el admin lo cambia por evento)
+  normalize_audio: true   # iguala el volumen entre grabaciones viejas y nuevas
+  max_queue: 50           # canciones máximas en la cola (0 = sin límite)
+  max_per_artist_in_row: 0  # p. ej. 3 = no más de 3 seguidas del mismo artista
+  next_up_seconds: 8      # cuánto se ve "Siguiente: …" sobre el video
+  embedded_video: true    # video dentro de KaraokeNino (necesita libmpv2; si no, mpv aparte)
+  background_music:
+    enabled: true         # música de fondo cuando la cola está vacía
+    genres: ["MUSICA"]
+    after_seconds: 30
+
+admin:
+  # ¡CAMBIA EL PIN antes de rentar! Se abre con Esc y el PIN.
+  # Si el teclado de la rockola no tiene Esc, usa otra tecla o una secuencia
+  # rápida, p. ej. ["KEY_KPSLASH", "KEY_KPSLASH", "KEY_KPSLASH"].
+  pin: "1234"
+  open_sequence: ["KEY_ESC"]
+  kids_genres: ["z INFANTILES"]   # lo único visible en modo infantil
+  hidden_genres: []               # géneros que nunca ven los invitados
+  shutdown_command: ["systemctl", "poweroff"]
+  reboot_command: ["systemctl", "reboot"]
+
+event:
+  welcome: ""             # p. ej. "¡Felices 15, Ana!" (también desde el admin)
+
+business:
+  name: "KaraokeNino"     # tu negocio, en la pantalla y en la de espera
+  contact: ""             # p. ej. "Renta de rockolas · 81 1234 5678"
+  logo: ""                # imagen PNG/JPG opcional para la pantalla de espera
+
+idle:
+  after_seconds: 90       # pantalla de espera sin teclas (0 = nunca)
+  rotate_seconds: 8
+
+ui:
+  # Fondo de fiesta en movimiento (luces y destellos), brillo en la canción
+  # elegida y chispas al agregar a la cola. Se pausa solo mientras suena un
+  # video. false = pantalla quieta (para computadoras muy lentas).
+  animations: true
+
+# Teclas (nombres evdev). Solo pon las que quieras cambiar.
+keyboard:
+  bindings:
+    up: "KEY_KP8"
+    down: "KEY_KP2"
+    left: "KEY_KP4"
+    right: "KEY_KP6"
+    ok: "KEY_KPENTER"
+    next: "KEY_KPDOT"
+    genres: "KEY_KP5"
+    volume_up: "KEY_KPPLUS"
+    volume_down: "KEY_KPMINUS"
+    pause: "KEY_KPASTERISK"
+    playlist: "KEY_KPSLASH"
+    abc: "KEY_KP0"
+    reset: "KEY_KP1"
+    top: "KEY_KP7"
+    page_up: "KEY_KP9"
+    page_down: "KEY_KP3"

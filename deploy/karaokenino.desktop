@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=KaraokeNino
+Comment=Rockola de karaoke sin internet
+Exec=/opt/karaokenino/kiosk-start.sh
+Icon=media-playback-start
+Terminal=false
+X-GNOME-Autostart-enabled=true
+X-GNOME-Autostart-Delay=3

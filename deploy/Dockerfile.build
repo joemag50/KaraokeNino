@@ -1,0 +1,8 @@
+# Build image for "make release" (bookworm = glibc 2.36; Debian 11 is end-of-life)
+# and "make test-linux" (real mpv).
+FROM golang:1.24-bookworm AS build
+RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends \
+      libgl1-mesa-dev xorg-dev >/dev/null && rm -rf /var/lib/apt/lists/*
+
+FROM build AS test
+RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends mpv libmpv2 >/dev/null && rm -rf /var/lib/apt/lists/*

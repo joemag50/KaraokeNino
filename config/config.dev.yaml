@@ -1,0 +1,24 @@
+# PC de desarrollo SIN disco de música ni mpv:
+#   cp config/config.dev.yaml config/config.yaml
+# Cada canción "suena" 10 s para probar la cola.
+
+fullscreen: false
+demo_mode: true
+log_file: "data/logs/karaokenino.log"
+
+admin:
+  pin: "1234"
+
+event:
+  welcome: "¡Modo de prueba!"
+
+business:
+  name: "KaraokeNino"
+  contact: "Desarrollo"
+
+idle:
+  after_seconds: 60
+
+playback:
+  background_music:
+    enabled: false
