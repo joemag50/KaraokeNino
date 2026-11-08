@@ -5,6 +5,7 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -293,19 +294,7 @@ func TestScalesToAnyScreen(t *testing.T) {
 }
 
 func fmtInt(n int64) string {
-	return strings.TrimSpace(strings.Replace(strings.TrimLeft(" "+itoa(n), " "), "", "", 0))
-}
-
-func itoa(n int64) string {
-	if n == 0 {
-		return "0"
-	}
-	s := ""
-	for n > 0 {
-		s = string(rune('0'+n%10)) + s
-		n /= 10
-	}
-	return s
+	return strconv.FormatInt(n, 10)
 }
 
 // After a restart (or a power cut) the rockola opens silent with an empty

@@ -93,7 +93,10 @@ cp config/config.dev.yaml config/config.yaml   # sin disco ni mpv
 ./karaokenino
 make test                        # pruebas
 make test-linux                  # pruebas en Linux con mpv real (Docker)
+make test-e2e                    # prueba completa en Linux: montar disco, escanear, video (Docker)
+make snapshots                   # capturas de las pantallas en snapshots/
 make release                     # paquete para la rockola en dist/ (Docker)
+make clean                       # borra binarios, dist/ y snapshots/
 ```
 
 ## Estructura
@@ -103,7 +106,10 @@ cmd/karaokenino      programa de la rockola
 cmd/importcatalog    importar Musica.data, escanear disco, duplicados, catálogo imprimible, mantenimiento
 internal/catalog     SQLite: canciones, búsqueda, escaneo, ranking
 internal/library     encuentra el disco de música donde esté montado
+internal/config      lee config.yaml (tema, rutas, teclas, reproducción)
+internal/keyboard    traduce las teclas del teclado numérico a acciones
 internal/player      mpv (IPC, teclas, volumen) y la cola
+internal/mpvlib      video dentro de la pantalla con libmpv (si no está, usa mpv aparte)
 internal/ui          pantallas (navegar, ABC, búsqueda, cola, admin, espera)
 internal/thumbs      miniaturas de portadas (se hacen una vez; JPG, PNG, GIF, WebP o BMP sin importar la extensión)
 internal/state       volumen y ajustes que sobreviven a un apagón (la cola no: al reiniciar empieza vacía)

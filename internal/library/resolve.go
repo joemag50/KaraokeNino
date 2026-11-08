@@ -85,10 +85,3 @@ func matchFold(dir, part string) (string, error) {
 	}
 	return names[key], nil
 }
-
-// ForgetListings drops remembered folder listings (after the disk changes).
-func ForgetListings() {
-	listings.Lock()
-	listings.m = map[string]map[string]string{}
-	listings.Unlock()
-}

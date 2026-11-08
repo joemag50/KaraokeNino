@@ -272,15 +272,6 @@ func (l *rowList) selectIdx(i int) {
 	l.refresh()
 }
 
-// move goes d rows without wrapping (page jumps).
-func (l *rowList) move(d int) {
-	if len(l.items) == 0 {
-		return
-	}
-	l.sel = min(max(l.sel+d, 0), len(l.items)-1)
-	l.refresh()
-}
-
 func (l *rowList) setActive(a bool) {
 	if l.active != a {
 		l.active = a
@@ -454,14 +445,6 @@ func badgeFor(pal *Palette, k catalog.Kind) (string, color.NRGBA) {
 	default:
 		return "VIDEO", pal.Video
 	}
-}
-
-func isAudioType(t string) bool {
-	switch strings.ToUpper(t) {
-	case "MP3", "WMA", "WAV", "M4A", "OGG", "FLAC", "AAC":
-		return true
-	}
-	return false
 }
 
 func initials(name string) string {

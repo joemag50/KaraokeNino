@@ -93,7 +93,6 @@ type App struct {
 	lastKey    time.Time
 	idleTimer  *time.Timer
 	videoTimer *time.Timer
-	statusTill time.Time
 	nextShown  int64 // track id whose "Siguiente" notice was shown near the end
 	recent     []keyStamp
 	skipArmed  time.Time // first "." pressed (skip needs two)
