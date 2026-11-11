@@ -25,8 +25,8 @@ type videoView struct {
 	img           *canvas.Image
 	topBg, botBg  *canvas.LinearGradient
 	title, singer *canvas.Text
-	osd           *canvas.Text
-	hint          *canvas.Text
+	osd           *keyHint
+	hint          *keyHint
 	progress      *progressBar // hairline at the bottom edge
 
 	mu       sync.Mutex
@@ -50,10 +50,8 @@ func newVideoView(a *App) *videoView {
 	v.botBg = canvas.NewLinearGradient(color.NRGBA{}, color.NRGBA{0, 0, 0, 220}, 0)
 	v.title = newText("", pal.Text, true)
 	v.singer = newText("", pal.Accent2, true)
-	v.osd = newText("", pal.Text, true)
-	v.osd.Alignment = fyne.TextAlignCenter
-	v.hint = newText("", pal.TextDim, false)
-	v.hint.Alignment = fyne.TextAlignCenter
+	v.osd = newKeyHint(pal, Rect{40, designH - 118, designW - 80, 40}, 34, pal.Text, fyne.TextAlignCenter)
+	v.hint = newKeyHint(pal, Rect{40, designH - 54, designW - 80, 30}, 20, pal.TextDim, fyne.TextAlignCenter)
 
 	v.lay.placeFull(v.bg)
 	v.lay.placeFull(v.img)
@@ -61,8 +59,8 @@ func newVideoView(a *App) *videoView {
 	v.lay.placeText(v.title, Rect{40, 22, designW - 80, 40}, 34)
 	v.lay.placeText(v.singer, Rect{40, 62, designW - 80, 30}, 24)
 	v.lay.place(v.botBg, Rect{0, designH - 150, designW, 150})
-	v.lay.placeText(v.osd, Rect{40, designH - 118, designW - 80, 40}, 34)
-	v.lay.placeText(v.hint, Rect{40, designH - 52, designW - 80, 26}, 20)
+	v.osd.place(v.lay)
+	v.hint.place(v.lay)
 	// Over the video the progress is a faint hairline on the very bottom
 	// edge: always there (the singer sees how much is left) but too thin and
 	// translucent to hide the lyrics. It moves at most once per design pixel.
@@ -70,7 +68,7 @@ func newVideoView(a *App) *videoView {
 	v.progress.bg.FillColor = color.NRGBA{255, 255, 255, 22}
 	v.progress.fill.FillColor = withAlpha(pal.Accent2, 150)
 
-	v.root = container.New(v.lay, v.bg, v.img, v.topBg, v.title, v.singer, v.botBg, v.osd, v.hint,
+	v.root = container.New(v.lay, v.bg, v.img, v.topBg, v.title, v.singer, v.botBg, v.osd.root, v.hint.root,
 		v.progress.bg, v.progress.fill)
 	v.root.Hide()
 	return v
@@ -137,7 +135,7 @@ func (v *videoView) setFull(full bool) {
 	v.mu.Lock()
 	v.full = full
 	v.mu.Unlock()
-	for _, o := range []fyne.CanvasObject{v.topBg, v.title, v.singer, v.osd, v.hint} {
+	for _, o := range []fyne.CanvasObject{v.topBg, v.title, v.singer, v.osd.root, v.hint.root} {
 		if full {
 			o.Show()
 		} else {
@@ -180,23 +178,21 @@ func (v *videoView) startSong(title, singer string) {
 
 // message shows a banner ("Siguiente: …", volume) for d.
 func (v *videoView) message(text string, d time.Duration) {
-	v.osd.Text = fit(firstLine(text), designW-80, 34)
-	v.osd.Refresh()
+	v.osd.set(firstLine(text))
 	v.updateShade()
 	if v.hideOSD != nil {
 		v.hideOSD.Stop()
 	}
 	v.hideOSD = time.AfterFunc(d, func() {
 		fyne.Do(func() {
-			v.osd.Text = ""
-			v.osd.Refresh()
+			v.osd.set("")
 			v.updateShade()
 		})
 	})
 }
 
 // fullHint tells the singer how to reach the list without stopping the song.
-const fullHint = "7  ver la lista y pedir otra canción   ·   + −  volumen   ·   *  pausa   ·   . .  saltar"
+var fullHint = key("7") + " ver la lista y pedir otra canción   ·   " + key("+") + key("−") + " volumen   ·   " + key("*") + " pausa   ·   " + key(".") + " saltar"
 
 // updateShade darkens the bottom of the video only while a message or the
 // hint is there, so it never sits over the lyrics for the whole song.
@@ -224,16 +220,14 @@ var hintFor = 6 * time.Second
 
 // showHint shows how to reach the list for a few seconds.
 func (v *videoView) showHint() {
-	v.hint.Text = fullHint
-	v.hint.Refresh()
+	v.hint.set(fullHint)
 	v.updateShade()
 	if v.hideHint != nil {
 		v.hideHint.Stop()
 	}
 	v.hideHint = time.AfterFunc(hintFor, func() {
 		fyne.Do(func() {
-			v.hint.Text = ""
-			v.hint.Refresh()
+			v.hint.set("")
 			v.updateShade()
 		})
 	})

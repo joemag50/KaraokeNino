@@ -22,7 +22,7 @@ si siguen fallando).
 | Administrar cola | 4/6 mover, Intro quitar |
 | Saltar / Vaciar la cola | Vaciar pide confirmar (Intro dos veces) |
 | Modo infantil | Solo muestra `z INFANTILES` (configurable en `admin.kids_genres`) |
-| Música de fondo | Canciones al azar de MUSICA cuando nadie pide (empieza después de la primera canción del evento, nunca al encender); cualquier pedido la interrumpe |
+| Música de fondo | Apagada al instalar. Canciones al azar de MUSICA cuando nadie pide (empieza después de la primera canción del evento, nunca al encender); cualquier pedido la interrumpe |
 | Tema de colores | moderno (neón de antro), boda (champaña y oro), xv (fucsia, violeta y destellos dorados), infantil (colores de dulce); al reiniciar el programa. Las animaciones se apagan con `ui.animations: false` en la configuración |
 | Mensaje de bienvenida | "¡Felices 15, Ana!" en pantalla (necesita teclado completo; también en `event.welcome`) |
 | Nuevo evento | Reinicia "Lo más pedido" para esta fiesta |
@@ -45,7 +45,7 @@ si siguen fallando).
   "Lo más pedido", cómo pedir canciones y qué está sonando.
 - Límites opcionales: `max_queue` (cola máxima) y `max_per_artist_in_row`.
 - A prueba de invitados necios: la misma canción no entra dos veces a la cola;
-  saltar pide **.** dos veces y no se puede saltar otra en 5 s; una pausa o el
+  **.** salta la canción al instante (sin esperar); una pausa o el
   volumen en 0 quedan indicados abajo hasta corregirse.
 
 ## Si algo falla

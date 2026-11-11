@@ -227,7 +227,7 @@ func TestLetters(t *testing.T) {
 	store := newStore(t)
 	importInto(t, store, sample, ImportOptions{})
 	g := genreID(t, store, "KARAOKES")
-	ls, err := store.Letters(ctx, g, KindAll)
+	ls, err := store.Letters(ctx, []int64{g}, KindAll)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -235,8 +235,42 @@ func TestLetters(t *testing.T) {
 	if len(ls) != 3 || ls[0].Letter != "j" || ls[1].Letter != "s" || ls[2].Letter != "z" {
 		t.Fatalf("letras: %+v", ls)
 	}
-	as, err := store.ArtistsByLetter(ctx, g, KindAll, "Z")
+	as, err := store.ArtistsByLetter(ctx, []int64{g}, KindAll, "Z")
 	if err != nil || len(as) != 1 || as[0].Name != "Zoé" {
 		t.Fatalf("artistas con Z: %v %+v", err, as)
+	}
+}
+
+// The guest list has no genres: the same artist in two genres is one entry
+// with the songs of both, and nil genres means every genre.
+func TestArtistsMergedAcrossGenres(t *testing.T) {
+	ctx := context.Background()
+	store := newStore(t)
+	importInto(t, store, sample+
+		"\tJuan Gabriel|D:\\master.1000\\musica\\JUAN GABRIEL\\|\r\n"+
+		"\t\tD:\\master.1000\\musica\\JUAN GABRIEL\\|Hasta Que Te Conoc\xed|MP3\r\n", ImportOptions{})
+	ls, err := store.Letters(ctx, nil, KindAll)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, l := range ls {
+		if l.Letter == "j" && l.Count != 1 {
+			t.Fatalf("Juan Gabriel debe contar una vez: %+v", ls)
+		}
+	}
+	as, err := store.ArtistsByLetter(ctx, nil, KindAll, "j")
+	if err != nil || len(as) != 1 || len(as[0].IDs) != 2 {
+		t.Fatalf("artistas con J: %v %+v", err, as)
+	}
+	if as[0].Cover == "" {
+		t.Fatalf("debe usar la carpeta con portada: %+v", as[0])
+	}
+	ts, err := store.TracksOf(ctx, as[0].IDs, KindAll)
+	if err != nil || len(ts) != 4 {
+		t.Fatalf("canciones de los dos géneros: %v %d", err, len(ts))
+	}
+	only, _ := store.ArtistsByLetter(ctx, []int64{genreID(t, store, "MUSICA")}, KindAll, "j")
+	if len(only) != 1 || len(only[0].IDs) != 1 {
+		t.Fatalf("con filtro de género (modo infantil) solo esa carpeta: %+v", only)
 	}
 }

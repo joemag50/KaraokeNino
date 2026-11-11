@@ -132,9 +132,6 @@ func TestBrowseQueueAndOverlays(t *testing.T) {
 	snapshot(t, w, "00-modos")
 	press(a, fyne.KeyEnter)
 
-	if g := a.currentGenre().Name; g != "KARAOKES" {
-		t.Fatalf("género inicial %q", g)
-	}
 	// Letters column: A (Alejandro Fernández), B, C, J, L, M, R, S, T, V, Z.
 	var letters []string
 	for _, l := range a.letters {

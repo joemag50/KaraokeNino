@@ -25,10 +25,10 @@ func (a *App) openPIN() {
 	}
 	d := newDialog(a, "Administrador", 560, 300)
 	pal := &a.pal
-	d.text("Escribe el PIN y presiona Intro", Rect{Left: d.inner.Left, Top: d.inner.Top + 4, Width: d.inner.Width, Height: 28}, 22, pal.TextDim, false)
+	d.keys("Escribe el PIN y presiona "+key("Intro"), Rect{Left: d.inner.Left, Top: d.inner.Top + 2, Width: d.inner.Width, Height: 32}, 22, pal.TextDim)
 	dots := d.text("", Rect{Left: d.inner.Left, Top: d.inner.Top + 50, Width: d.inner.Width, Height: 70}, 56, pal.Accent2, true)
 	msg := d.text("", Rect{Left: d.inner.Left, Top: d.inner.Top + 130, Width: d.inner.Width, Height: 26}, 20, pal.Accent, true)
-	d.setHint(". borrar · / cerrar")
+	d.setHint(key(".") + " borrar  ·  " + key("/") + " cerrar")
 	pin := ""
 	tries := 0
 	o := &overlay{root: d.container()}
@@ -82,7 +82,7 @@ type adminItem struct {
 func (a *App) openAdmin() {
 	d := newDialog(a, "Menú de administrador", 920, 640)
 	l := d.list(d.inner, 42, 22, 20)
-	d.setHint("8/2 elegir · 4/6 cambiar · Intro aceptar · / cerrar")
+	d.setHint(key("8") + key("2") + " elegir  ·  " + key("4") + key("6") + " cambiar  ·  " + key("Intro") + " aceptar  ·  " + key("/") + " cerrar")
 
 	yesNo := func(b bool) string {
 		if b {
@@ -101,8 +101,8 @@ func (a *App) openAdmin() {
 				return
 			}
 			confirm[i] = time.Now()
-			a.flash("Presiona Intro otra vez para confirmar")
-			d.setHint("Presiona Intro otra vez para confirmar")
+			a.flash("Presiona " + key("Intro") + " otra vez para confirmar")
+			d.setHint("Presiona " + key("Intro") + " otra vez para confirmar")
 		}
 	}
 	items = []adminItem{
@@ -283,7 +283,7 @@ func (a *App) openAdminQueue() {
 	d := newDialog(a, "Administrar cola", 920, 600)
 	l := d.list(d.inner, 44, 22, 60)
 	l.empty = "La cola está vacía"
-	d.setHint("8/2 elegir · 4/6 mover · Intro o . quitar · / volver")
+	d.setHint(key("8") + key("2") + " elegir  ·  " + key("4") + key("6") + " mover  ·  " + key("Intro") + " o " + key(".") + " quitar  ·  " + key("/") + " volver")
 	render := func() {
 		_, q := a.box.Snapshot()
 		items := make([]rowItem, len(q))
@@ -325,7 +325,7 @@ func (a *App) openWelcomeEditor() {
 	d.text("Ejemplo: ¡Felices 15, Ana! (necesita teclado completo)", Rect{Left: d.inner.Left, Top: d.inner.Top, Width: d.inner.Width, Height: 24}, 18, pal.TextDim, false)
 	d.add(d.lay.place(newPanel(withAlpha(pal.Text, 20), pal.Accent2, 10), field))
 	t := d.text("", Rect{Left: field.Left + 16, Top: field.Top + 12, Width: field.Width - 32, Height: 34}, 28, pal.Text, true)
-	d.setHint("Escribe · Intro guardar · Esc cancelar · Intro vacío = quitar mensaje")
+	d.setHint("Escribe  ·  " + key("Intro") + " guardar  ·  " + key("Esc") + " cancelar  ·  " + key("Intro") + " vacío = quitar mensaje")
 	text := a.welcomeText()
 	show := func() { t.Text = text + "_"; t.Refresh() }
 	o := &overlay{root: d.container()}
@@ -359,7 +359,7 @@ func (a *App) openWelcomeEditor() {
 func (a *App) openDiagnostics() {
 	d := newDialog(a, "Diagnóstico", 1100, 660)
 	l := d.list(d.inner, 30, 16, 10)
-	d.setHint("8/2 desplazar · / volver")
+	d.setHint(key("8") + key("2") + " desplazar  ·  " + key("/") + " volver")
 	var lines []string
 	add := func(format string, args ...any) { lines = append(lines, fmt.Sprintf(format, args...)) }
 

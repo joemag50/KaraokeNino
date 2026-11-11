@@ -146,26 +146,20 @@ func TestNecioEnterTenTimes(t *testing.T) {
 	}
 }
 
-// One "." must not skip someone else's song: it asks to press again.
-func TestNecioSkipNeedsTwoPresses(t *testing.T) {
+// One "." skips the song; mashing it does not run through the whole queue.
+func TestNecioSkipOnePress(t *testing.T) {
 	a := startedApp(t)
 	press(a, fyne.KeyEnter, "2", fyne.KeyEnter, "2", fyne.KeyEnter) // 3 songs
 	first, _ := a.box.Snapshot()
 	press(a, ".")
-	if cur, _ := a.box.Snapshot(); cur.TrackID != first.TrackID {
-		t.Fatal("una sola . no debe saltar la canción")
+	if cur, _ := a.box.Snapshot(); cur != nil && cur.TrackID == first.TrackID {
+		t.Fatal("una . debe saltar la canción")
 	}
-	if !strings.Contains(a.scr.status.Text, "otra vez") {
-		t.Fatalf("debe pedir confirmación: %q", a.scr.status.Text)
-	}
+	// No waiting between skips: the next "." skips again right away.
+	second, _ := a.box.Snapshot()
 	press(a, ".")
-	if cur, _ := a.box.Snapshot(); cur.TrackID == first.TrackID {
-		t.Fatal("dos . seguidas deben saltar")
-	}
-	// Mashing "." does not empty the whole queue in one go: each skip needs its own pair.
-	press(a, ".", ".", ".", ".")
-	if cur, q := a.box.Snapshot(); cur == nil && len(q) == 0 {
-		t.Fatal("presionar . muchas veces vació toda la cola")
+	if cur, _ := a.box.Snapshot(); cur != nil && cur.TrackID == second.TrackID {
+		t.Fatal("la segunda . también debe saltar, sin esperar")
 	}
 }
 
@@ -253,7 +247,7 @@ func TestTextsMatchTheKeys(t *testing.T) {
 
 // Fullscreen video (karaoke or music video): every key except volume and
 // pause brings the menu back, every time; 7 returns to fullscreen; "." leaves
-// AND prepares the skip.
+// AND skips.
 func TestVideoFullscreenKeys(t *testing.T) {
 	a := startedApp(t)
 	press(a, fyne.KeyEnter) // a karaoke video
@@ -294,14 +288,13 @@ func TestVideoFullscreenKeys(t *testing.T) {
 	if !a.MPV.VideoFull() {
 		t.Fatal("volumen y pausa no deben sacar del video")
 	}
-	// "." leaves the video and asks for the second "."
+	// "." leaves the video and skips the song
 	press(a, ".")
-	if a.MPV.VideoFull() || !strings.Contains(a.scr.status.Text, "otra vez") {
-		t.Fatalf("la primera . debe salir y pedir otra: full=%v %q", a.MPV.VideoFull(), a.scr.status.Text)
+	if a.MPV.VideoFull() {
+		t.Fatal(". debe salir del video")
 	}
-	press(a, ".")
 	if now, _ := a.box.Snapshot(); now != nil && now.TrackID == cur.TrackID {
-		t.Fatal("la segunda . debe saltar")
+		t.Fatal(". debe saltar")
 	}
 }
 
@@ -597,7 +590,7 @@ func TestFullscreenHintFades(t *testing.T) {
 	t.Cleanup(func() { hintFor = 6 * time.Second })
 	a.vv.Show(true)
 	a.vv.setFull(true)
-	if !strings.HasPrefix(a.vv.hint.Text, "7  ver la lista") || a.vv.botBg.Hidden {
+	if !strings.HasPrefix(a.vv.hint.Text, "7 ver la lista") || a.vv.botBg.Hidden {
 		t.Fatalf("pista %q, sombra oculta %v", a.vv.hint.Text, a.vv.botBg.Hidden)
 	}
 	if a.vv.progress.hidden {
@@ -631,7 +624,11 @@ func TestMusicPlayerScreen(t *testing.T) {
 	}
 	snapshot(t, a.window, "musica-portada")
 	vol := a.MPV.Volume()
-	press(a, "+", "*")
+	press(a, "+")
+	if !strings.Contains(a.au.osd.Text, "Volumen") {
+		t.Fatalf("la pantalla de música debe mostrar el volumen: %q", a.au.osd.Text)
+	}
+	press(a, "*")
 	if !a.audioFull || a.MPV.Volume() <= vol {
 		t.Fatal("volumen y pausa funcionan sin salir de la pantalla de la canción")
 	}

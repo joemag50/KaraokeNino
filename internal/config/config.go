@@ -159,7 +159,7 @@ func Default() Config {
 			NextUpSeconds:     8,
 			EmbeddedVideo:     true,
 			BackgroundMusic: BackgroundMusicConfig{
-				Enabled:      true,
+				Enabled:      false,
 				Genres:       []string{"MUSICA"},
 				AfterSeconds: 30,
 			},
@@ -181,7 +181,6 @@ func Default() Config {
 				"right":       "KEY_KP6",
 				"ok":          "KEY_KPENTER",
 				"next":        "KEY_KPDOT",
-				"genres":      "KEY_KP5",
 				"volume_up":   "KEY_KPPLUS",
 				"volume_down": "KEY_KPMINUS",
 				"pause":       "KEY_KPASTERISK",

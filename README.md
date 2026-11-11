@@ -37,14 +37,13 @@ y se ilumina al presionarla.
 | 6 / 4 | Pasar a la columna de la derecha / izquierda · en Canciones con un video en el recuadro, **6 regresa al reproductor** |
 | Intro | Entrar (Letra → Artistas → Canciones) · en Canciones: **agregar a la cola** |
 | 9 / 3 | Saltar 8 lugares arriba / abajo |
-| 5 | Siguiente género |
 | 1 | Volver a elegir Karaoke · Videos · Música |
 | 0 | Pedir canción por **número** del catálogo impreso |
 | / | Ver la cola |
 | 7 | Con un video sonando: **cambia entre Reproducción y Lista** (la tecla dice «Cantar» o «Ver video») · sin video: lo más pedido |
 | + / − | Volumen (hasta el máximo del evento) |
 | * | Pausa (queda indicada abajo hasta continuar) |
-| . | Saltar la canción: **dos veces seguidas** (una sola no corta la canción de nadie) |
+| . | Saltar la canción |
 | Esc | Menú de administrador (pide el PIN) |
 
 Al encender se ve la **bienvenida** con el avance de la carga y luego

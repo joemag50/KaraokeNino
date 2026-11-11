@@ -49,7 +49,7 @@ playback:
   next_up_seconds: 8      # cuánto se ve "Siguiente: …" sobre el video
   embedded_video: true    # video dentro de KaraokeNino (necesita libmpv2; si no, mpv aparte)
   background_music:
-    enabled: true         # música de fondo cuando la cola está vacía
+    enabled: false        # música de fondo cuando la cola está vacía (se activa en el admin)
     genres: ["MUSICA"]
     after_seconds: 30
 
@@ -91,7 +91,6 @@ keyboard:
     right: "KEY_KP6"
     ok: "KEY_KPENTER"
     next: "KEY_KPDOT"
-    genres: "KEY_KP5"
     volume_up: "KEY_KPPLUS"
     volume_down: "KEY_KPMINUS"
     pause: "KEY_KPASTERISK"

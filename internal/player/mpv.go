@@ -424,11 +424,13 @@ func (m *MPV) Paused() bool {
 	return m.paused
 }
 
-// ShowText puts a message over the video (e.g. "Siguiente: ...").
+// ShowText puts a message over the video (e.g. "Siguiente: ..."). OnOSD
+// gets the text as is; mpv's own OSD gets it without control characters
+// (the UI marks keys with them).
 func (m *MPV) ShowText(text string, d time.Duration) {
 	m.mu.Lock()
 	eng := m.eng
-	m.commandLocked("show-text", text, int(d/time.Millisecond))
+	m.commandLocked("show-text", dropControl(text), int(d/time.Millisecond))
 	m.mu.Unlock()
 	if eng != nil && m.OnOSD != nil {
 		m.OnOSD(text, d)
@@ -535,4 +537,13 @@ func writeInputConf() (string, error) {
 	}
 	p := filepath.Join(os.TempDir(), fmt.Sprintf("karaokenino-input-%d.conf", os.Getpid()))
 	return p, os.WriteFile(p, []byte(b.String()), 0o644)
+}
+
+func dropControl(s string) string {
+	return strings.Map(func(r rune) rune {
+		if r < 0x20 && r != '\n' {
+			return -1
+		}
+		return r
+	}, s)
 }

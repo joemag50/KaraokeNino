@@ -21,7 +21,7 @@ type idleScreen struct {
 	bg                      *partyBackground
 	welcome, brand, contact *canvas.Text
 	slideTitle              *canvas.Text
-	lines                   []*canvas.Text
+	lines                   []*keyHint
 	logo                    *canvas.Image
 	footer                  *canvas.Text
 	slide                   int
@@ -54,8 +54,8 @@ func newIdleScreen(a *App) *idleScreen {
 	s.slideTitle = cx(newText("", pal.Accent2, true))
 	add(s.lay.placeText(s.slideTitle, Rect{Left: 40, Top: dh * 45 / 100, Width: dw - 80, Height: 40}, 32))
 	for i := 0; i < 6; i++ {
-		t := cx(newText("", pal.Text, false))
-		add(s.lay.placeText(t, Rect{Left: 60, Top: dh*53/100 + i*38, Width: dw - 120, Height: 34}, 26))
+		t := newKeyHint(pal, Rect{Left: 60, Top: dh*53/100 + i*38, Width: dw - 120, Height: 36}, 26, pal.Text, fyne.TextAlignCenter)
+		add(t.place(s.lay))
 		s.lines = append(s.lines, t)
 	}
 	s.contact = cx(newText("", pal.TextDim, true))
@@ -156,16 +156,18 @@ func (s *idleScreen) render() {
 		}
 		if len(lines) == 0 {
 			title = "¡Sé el primero en cantar!"
-			lines = []string{"Elige la letra, el artista y la canción", "con 8 / 2 para subir y bajar, y 4 / 6 para cambiar de columna", "Presiona Intro para agregarla a la cola"}
+			lines = []string{"Elige la letra, el artista y la canción",
+				"con " + key("8") + key("2") + " para subir y bajar, y " + key("4") + key("6") + " para cambiar de columna",
+				"Presiona " + key("Intro") + " para agregarla a la cola"}
 		}
 	case 1:
 		title = "¿Cómo pedir una canción?"
 		lines = []string{
-			"8 / 2  subir y bajar   ·   4 / 6  cambiar de columna",
-			"Letra  →  Artista  →  Canción   ·   Intro  agregar a la cola",
-			"0  pedir por número del catálogo   ·   5  cambiar de género",
-			"/  ver la cola   ·   7  lo más pedido   ·   1  Karaoke · Videos · Música",
-			"+ / −  volumen   ·   *  pausa",
+			key("8") + key("2") + " subir y bajar   ·   " + key("4") + key("6") + " cambiar de columna",
+			"Letra  →  Artista  →  Canción   ·   " + key("Intro") + " agregar a la cola",
+			key("0") + " pedir por número del catálogo",
+			key("/") + " ver la cola   ·   " + key("7") + " lo más pedido   ·   " + key("1") + " Karaoke · Videos · Música",
+			key("+") + key("−") + " volumen   ·   " + key("*") + " pausa",
 		}
 	case 2:
 		cur, q := a.box.Snapshot()
@@ -197,10 +199,10 @@ func (s *idleScreen) render() {
 	s.slideTitle.Text = title
 	s.slideTitle.Refresh()
 	for i, t := range s.lines {
-		t.Text = ""
+		line := ""
 		if i < len(lines) {
-			t.Text = fit(lines[i], designW-120, 26)
+			line = lines[i]
 		}
-		t.Refresh()
+		t.set(line)
 	}
 }

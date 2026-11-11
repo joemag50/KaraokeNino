@@ -12,9 +12,15 @@ func TestExampleConfigLoads(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: %v", f, err)
 		}
-		if cfg.Admin.PIN == "" || len(cfg.Keyboard.Bindings) < 16 || cfg.Library.DirName != "master.1000" {
+		if cfg.Admin.PIN == "" || len(cfg.Keyboard.Bindings) < 15 || cfg.Library.DirName != "master.1000" {
 			t.Fatalf("%s: %+v", f, cfg)
 		}
+		if cfg.Playback.BackgroundMusic.Enabled {
+			t.Fatalf("%s: la música de fondo debe venir apagada al instalar", f)
+		}
+	}
+	if Default().Playback.BackgroundMusic.Enabled {
+		t.Fatal("la música de fondo debe venir apagada por defecto")
 	}
 }
 

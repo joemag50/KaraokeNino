@@ -129,6 +129,8 @@ type Genre struct {
 }
 
 // Artist is a folder of songs. Folder and Cover are relative to the library root.
+// In the guest list, folders with the same name in different genres are one
+// artist: IDs holds every folder (ID is the first one).
 type Artist struct {
 	ID      int64
 	GenreID int64
@@ -136,6 +138,20 @@ type Artist struct {
 	Folder  string
 	Cover   string
 	Tracks  int
+	IDs     []int64
+}
+
+// HasID reports whether id is one of the artist's folders.
+func (a Artist) HasID(id int64) bool {
+	if a.ID == id {
+		return true
+	}
+	for _, x := range a.IDs {
+		if x == id {
+			return true
+		}
+	}
+	return false
 }
 
 // Track is one playable file. ID doubles as the song number guests can dial.
@@ -617,10 +633,13 @@ type LetterCount struct {
 
 const letterExpr = `CASE WHEN substr(a.sort_key,1,1) BETWEEN 'a' AND 'z' THEN substr(a.sort_key,1,1) ELSE '#' END`
 
-// Letters returns the letters that have artists in a genre, A..Z then "#".
-func (s *Store) Letters(ctx context.Context, genreID int64, kind Kind) ([]LetterCount, error) {
-	rows, err := s.q.QueryContext(ctx, `SELECT `+letterExpr+` l, COUNT(*) FROM artists a WHERE `+visibleArtist(kind)+`
-GROUP BY l ORDER BY l='#', l`, genreID)
+// Letters returns the letters that have artists in the given genres
+// (nil = all), A..Z then "#". Same-name artists count once.
+func (s *Store) Letters(ctx context.Context, genreIDs []int64, kind Kind) ([]LetterCount, error) {
+	where, args := genreFilter(genreIDs)
+	rows, err := s.q.QueryContext(ctx, `SELECT `+letterExpr+` l, COUNT(DISTINCT a.sort_key) FROM artists a
+WHERE `+countCol(kind)+`>0`+where+`
+GROUP BY l ORDER BY l='#', l`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -636,23 +655,39 @@ GROUP BY l ORDER BY l='#', l`, genreID)
 	return out, rows.Err()
 }
 
-// ArtistsByLetter lists a genre's artists starting with letter, sorted.
-func (s *Store) ArtistsByLetter(ctx context.Context, genreID int64, kind Kind, letter string) ([]Artist, error) {
+// ArtistsByLetter lists the artists of the given genres (nil = all) starting
+// with letter, sorted, in one list: folders with the same name in different
+// genres become one artist (see Artist.IDs).
+func (s *Store) ArtistsByLetter(ctx context.Context, genreIDs []int64, kind Kind, letter string) ([]Artist, error) {
+	where, args := genreFilter(genreIDs)
 	rows, err := s.q.QueryContext(ctx, `
-SELECT a.id, a.genre_id, a.name, a.folder, a.cover, `+countCol(kind)+`
-FROM artists a WHERE `+visibleArtist(kind)+` AND `+letterExpr+`=?
-ORDER BY a.sort_key, a.id`, genreID, strings.ToLower(letter))
+SELECT a.id, a.genre_id, a.name, a.folder, a.cover, `+countCol(kind)+`, a.sort_key
+FROM artists a WHERE `+countCol(kind)+`>0`+where+` AND `+letterExpr+`=?
+ORDER BY a.sort_key, a.id`, append(args, strings.ToLower(letter))...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	var out []Artist
+	last := ""
 	for rows.Next() {
 		var r Artist
-		if err := rows.Scan(&r.ID, &r.GenreID, &r.Name, &r.Folder, &r.Cover, &r.Tracks); err != nil {
+		var key string
+		if err := rows.Scan(&r.ID, &r.GenreID, &r.Name, &r.Folder, &r.Cover, &r.Tracks, &key); err != nil {
 			return nil, err
 		}
+		if len(out) > 0 && key == last {
+			m := &out[len(out)-1]
+			m.IDs = append(m.IDs, r.ID)
+			m.Tracks += r.Tracks
+			if m.Cover == "" && r.Cover != "" {
+				m.Folder, m.Cover = r.Folder, r.Cover // show a folder that has a cover
+			}
+			continue
+		}
+		r.IDs = []int64{r.ID}
 		out = append(out, r)
+		last = key
 	}
 	return out, rows.Err()
 }
@@ -708,6 +743,24 @@ func scanTracks(rows *sql.Rows) ([]Track, error) {
 // Tracks lists an artist's playable songs of kind by title.
 func (s *Store) Tracks(ctx context.Context, artistID int64, kind Kind) ([]Track, error) {
 	rows, err := s.q.QueryContext(ctx, trackSelect+` WHERE t.artist_id=? AND t.missing=0`+kindCond(kind)+` ORDER BY t.sort_key, t.id`, artistID)
+	if err != nil {
+		return nil, err
+	}
+	return scanTracks(rows)
+}
+
+// TracksOf lists the playable songs of kind of several artist folders (one
+// merged artist) by title.
+func (s *Store) TracksOf(ctx context.Context, artistIDs []int64, kind Kind) ([]Track, error) {
+	if len(artistIDs) == 0 {
+		return nil, nil
+	}
+	ph := strings.Repeat(",?", len(artistIDs))[1:]
+	args := make([]any, len(artistIDs))
+	for i, id := range artistIDs {
+		args[i] = id
+	}
+	rows, err := s.q.QueryContext(ctx, trackSelect+` WHERE t.artist_id IN (`+ph+`) AND t.missing=0`+kindCond(kind)+` ORDER BY t.sort_key, t.id`, args...)
 	if err != nil {
 		return nil, err
 	}

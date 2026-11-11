@@ -41,8 +41,11 @@ master.1000/
 └── karaokenino-update/          ← solo para actualizar (ver 3); se puede borrar después
 ```
 
-- **Género** = carpeta de primer nivel (en el menú se ve en mayúsculas: KARAOKES,
-  MUSICA…). **Artista** = carpeta dentro del género. **Canción** = archivo.
+- **Género** = carpeta de primer nivel (KARAOKES, MUSICA…). Sirve para el modo
+  infantil, los géneros ocultos y la música de fondo; los invitados no lo ven:
+  todos los artistas salen en una sola lista, y el mismo artista en dos
+  géneros aparece una vez con todas sus canciones. **Artista** = carpeta
+  dentro del género. **Canción** = archivo.
 - Todo lo que está en un género cuyo nombre dice **«karaoke»** es **karaoke**.
   En los demás géneros, un archivo con video (AVI, MPG, MP4, MKV, WMV…) es
   **video** y uno de audio (MP3, WMA, FLAC…) es **música**.

@@ -56,7 +56,7 @@ type dialog struct {
 	box   Rect // panel rect
 	inner Rect // content rect below the title
 	title *canvas.Text
-	hint  *canvas.Text
+	hint  *keyHint
 }
 
 func newDialog(a *App, title string, w, h int) *dialog {
@@ -71,17 +71,23 @@ func newDialog(a *App, title string, w, h int) *dialog {
 	d.add(d.lay.place(accent, Rect{Left: d.box.Left + 18, Top: d.box.Top + 58, Width: d.box.Width - 36, Height: 3}))
 	d.title = newText(title, pal.Text, true)
 	d.add(d.lay.placeText(d.title, Rect{Left: d.box.Left + 24, Top: d.box.Top + 14, Width: d.box.Width - 48, Height: 36}, 28))
-	d.hint = newText("", pal.TextDim, false)
-	d.add(d.lay.placeText(d.hint, Rect{Left: d.box.Left + 24, Top: d.box.Y2() - 34, Width: d.box.Width - 48, Height: 22}, 16))
+	d.hint = newKeyHint(pal, Rect{Left: d.box.Left + 24, Top: d.box.Y2() - 36, Width: d.box.Width - 48, Height: 26}, 16, pal.TextDim, fyne.TextAlignLeading)
+	d.add(d.hint.place(d.lay))
 	d.inner = Rect{Left: d.box.Left + 24, Top: d.box.Top + 74, Width: d.box.Width - 48, Height: d.box.Height - 74 - 44}
 	return d
 }
 
 func (d *dialog) add(o ...fyne.CanvasObject) { d.objs = append(d.objs, o...) }
 
-func (d *dialog) setHint(s string) {
-	d.hint.Text = s
-	d.hint.Refresh()
+// setHint shows the keys of this window at its bottom (mark keys with key()).
+func (d *dialog) setHint(s string) { d.hint.set(s) }
+
+// keys is a line of text with key caps (see key()).
+func (d *dialog) keys(s string, r Rect, size float32, c color.Color) *keyHint {
+	h := newKeyHint(&d.a.pal, r, size, c, fyne.TextAlignLeading)
+	h.set(s)
+	d.add(h.place(d.lay))
+	return h
 }
 
 func (d *dialog) text(s string, r Rect, size float32, c color.Color, bold bool) *canvas.Text {
@@ -113,7 +119,7 @@ func (a *App) openNumber() {
 	d.text("Marca el número del catálogo:", Rect{Left: d.inner.Left, Top: d.inner.Top + 6, Width: d.inner.Width, Height: 30}, 22, pal.TextDim, false)
 	big := d.text("_", Rect{Left: d.inner.Left, Top: d.inner.Top + 44, Width: d.inner.Width, Height: 70}, 60, pal.Accent2, true)
 	song := d.text("", Rect{Left: d.inner.Left, Top: d.inner.Top + 128, Width: d.inner.Width, Height: 34}, 26, pal.Text, true)
-	d.setHint("Números: marcar  ·  .  borrar  ·  Intro agregar  ·  /  cerrar")
+	d.setHint("Números: marcar  ·  " + key(".") + " borrar  ·  " + key("Intro") + " agregar  ·  " + key("/") + " cerrar")
 
 	digits := ""
 	var found *catalog.Track
@@ -187,7 +193,7 @@ func (a *App) openQueue() {
 			items = append(items, rowItem{Num: fmt.Sprint(i + 1), Text: it.Title, Sub: it.Artist})
 		}
 		l.set(items, min(l.sel, max(len(items)-1, 0)))
-		d.setHint(fmt.Sprintf("%d en cola · 8/2 recorrer · / cerrar", len(q)))
+		d.setHint(fmt.Sprintf("%d en cola  ·  ", len(q)) + key("8") + key("2") + " recorrer  ·  " + key("/") + " cerrar")
 	}
 	o := &overlay{name: "cola", root: d.container(), onQueue: render}
 	o.key = func(name fyne.KeyName, action string) {
@@ -217,7 +223,7 @@ func (a *App) openTop() {
 		items[i] = rowItem{Num: fmt.Sprintf("%d.", i+1), Text: r.Title, Sub: fmt.Sprintf("%s · %d veces", r.Artist, r.Plays), Badge: badge, Color: col}
 	}
 	l.set(items, 0)
-	d.setHint("8/2 elegir · Intro agregar a la cola · / cerrar")
+	d.setHint(key("8") + key("2") + " elegir  ·  " + key("Intro") + " agregar a la cola  ·  " + key("/") + " cerrar")
 	o := &overlay{name: "top", root: d.container()}
 	o.key = func(name fyne.KeyName, action string) {
 		switch {
@@ -270,7 +276,7 @@ func (a *App) openSearch(initial string) {
 	q := d.text("", Rect{Left: field.Left + 16, Top: field.Top + 10, Width: field.Width - 32, Height: 34}, 28, pal.Text, true)
 	l := d.list(Rect{Left: d.inner.Left, Top: field.Y2() + 12, Width: d.inner.Width, Height: d.inner.Height - 64}, 42, 22, 90)
 	l.empty = "Escribe parte del título o del cantante"
-	d.setHint("Escribe · ↑/↓ elegir · Intro agregar · → ir al artista · Esc cerrar")
+	d.setHint("Escribe  ·  " + key("↑") + key("↓") + " elegir  ·  " + key("Intro") + " agregar  ·  " + key("→") + " ir al artista  ·  " + key("Esc") + " cerrar")
 
 	query := initial
 	var results []catalog.Track

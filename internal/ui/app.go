@@ -1,4 +1,4 @@
-// Package ui is the KaraokeNino screen: browse genres → artists → songs with
+// Package ui is the KaraokeNino screen: browse letters → artists → songs with
 // the keypad, queue songs, and the admin menu. Everything is drawn with
 // canvas primitives on a scaled design so it fits any TV.
 package ui
@@ -73,9 +73,9 @@ type App struct {
 	splashMin time.Duration // welcome screen stays at least this long
 	mode      catalog.Kind  // karaoke, videos or music
 
-	// browse state: genre → letter → artist → song
+	// browse state: letter → artist → song over every visible genre (kids
+	// mode / hidden genres) in one list
 	genres    []catalog.Genre
-	genreIdx  int
 	letters   []catalog.LetterCount
 	letterIdx int
 	artists   []catalog.Artist
@@ -95,12 +95,10 @@ type App struct {
 	videoTimer *time.Timer
 	nextShown  int64 // track id whose "Siguiente" notice was shown near the end
 	recent     []keyStamp
-	skipArmed  time.Time // first "." pressed (skip needs two)
 	// video waiting in the preview box goes back to fullscreen at videoBackAt
 	videoBackAt    time.Time
 	videoBackDelay time.Duration
 	countdownOn    bool
-	lastSkip       time.Time
 	pinLock        time.Time // too many wrong PINs: wait until then
 	pinFails       int
 	diskNote       string // lasting status messages (see refreshNotes)
@@ -230,8 +228,8 @@ func (a *App) start() {
 	if err := a.loadGenres(); err != nil {
 		a.flash(err.Error())
 	}
-	log.Printf("pantalla lista: %d géneros, %d artistas en %s (%s)", len(a.genres), len(a.artists),
-		a.currentGenre().Name, time.Since(t0).Round(time.Millisecond))
+	log.Printf("pantalla lista: %d géneros, %d artistas en la letra %s (%s)", len(a.genres), len(a.artists),
+		a.currentLetter(), time.Since(t0).Round(time.Millisecond))
 	if counts, err := a.Store.KindCounts(a.ctx); err == nil {
 		total := counts[catalog.KindKaraoke] + counts[catalog.KindVideo] + counts[catalog.KindAudio]
 		msg := "Buscando el disco de música…"
@@ -525,8 +523,7 @@ func (a *App) backToMenu() {
 	a.flash("Se terminó la cola · elige otra canción")
 }
 
-// skipKey: "." skips the current song only when pressed twice within 3 s,
-// so one stray press doesn't cut someone's song.
+// skipKey: "." skips the current song.
 func (a *App) skipKey() {
 	cur, q := a.box.Snapshot()
 	switch {
@@ -534,21 +531,8 @@ func (a *App) skipKey() {
 		a.box.Next()
 	case cur == nil:
 		a.flash("No hay nada sonando")
-	case cur.Filler:
-		a.box.Next()
-	case time.Since(a.lastSkip) < 5*time.Second:
-		// Mashing "." must not run through everybody's songs.
-		a.skipArmed = time.Time{}
-		a.flash("Espera un momento antes de saltar otra canción")
-	case time.Since(a.skipArmed) < 3*time.Second:
-		a.skipArmed = time.Time{}
-		a.lastSkip = time.Now()
-		a.box.Next()
 	default:
-		a.skipArmed = time.Now()
-		msg := "Presiona . otra vez para saltar «" + cur.Title + "»"
-		a.flash(msg)
-		a.MPV.ShowText(msg, 3*time.Second)
+		a.box.Next()
 	}
 }
 
@@ -563,9 +547,9 @@ func (a *App) refreshNotes() {
 	case a.diskNote != "":
 		a.scr.setStatusSticky(a.diskNote)
 	case cur != nil && a.MPV.Paused():
-		a.scr.setStatusSticky("⏸ En pausa · presiona * para continuar")
+		a.scr.setStatusSticky("⏸ En pausa · presiona " + key("*") + " para continuar")
 	case a.MPV.Volume() == 0:
-		a.scr.setStatusSticky("🔇 Volumen en 0 · presiona + para subir")
+		a.scr.setStatusSticky("🔇 Volumen en 0 · presiona " + key("+") + " para subir")
 	case a.scanNote != "":
 		a.scr.setStatusSticky(a.scanNote)
 	default:
@@ -750,8 +734,7 @@ func (a *App) onKey(name fyne.KeyName, fromMPV bool) {
 	//   - Lista: the menu, with the video going on in the preview box.
 	// 7 always toggles between them (see browseKey "top"). In Reproducción,
 	// volume and pause work as usual and ANY other key also opens the list
-	// (the key is consumed); "." also prepares the skip, so a second "."
-	// skips. The list goes back to Reproducción by itself after
+	// (the key is consumed); "." also skips. The list goes back to Reproducción by itself after
 	// videoBackDelay without keys.
 	if a.playerOn() {
 		a.armVideoFullscreen()
@@ -782,12 +765,12 @@ func (a *App) onKey(name fyne.KeyName, fromMPV bool) {
 func (a *App) listModeMsg() string {
 	cur, _ := a.box.Snapshot()
 	if cur != nil && cur.Karaoke {
-		return "El karaoke sigue en el recuadro · 7 para volver a cantar"
+		return "El karaoke sigue en el recuadro · " + key("7") + " para volver a cantar"
 	}
 	if cur != nil && cur.Audio {
-		return "La música sigue sonando · 7 para ver la canción"
+		return "La música sigue sonando · " + key("7") + " para ver la canción"
 	}
-	return "El video sigue en el recuadro · 7 para verlo en grande"
+	return "El video sigue en el recuadro · " + key("7") + " para verlo en grande"
 }
 
 // onRune receives typed characters (full keyboard): letters open the search.
@@ -871,8 +854,6 @@ func (a *App) browseKey(name fyne.KeyName, action string) {
 	switch action {
 	case "next":
 		a.skipKey()
-	case "genres":
-		a.nextGenre()
 	case "volume_up", "volume_down":
 		d := 1
 		if action == "volume_down" {
@@ -880,13 +861,13 @@ func (a *App) browseKey(name fyne.KeyName, action string) {
 		}
 		v := a.MPV.ChangeVolume(d)
 		a.flash(fmt.Sprintf("Volumen: %d de %d", v, a.MPV.MaxVolume()))
-		a.MPV.ShowText(fmt.Sprintf("Volumen %d", v), 2*time.Second)
+		a.showText(fmt.Sprintf("Volumen %d", v), 2*time.Second)
 		a.saveState()
 		a.refreshNotes()
 	case "pause":
 		if cur, _ := a.box.Snapshot(); cur != nil {
 			if a.MPV.TogglePause() {
-				a.MPV.ShowText("⏸ En pausa · * para continuar", 3*time.Second)
+				a.showText("⏸ En pausa · "+key("*")+" para continuar", 3*time.Second)
 			} else {
 				a.flash("▶ Continúa")
 			}
@@ -1065,6 +1046,15 @@ func (a *App) updatePreviewGeometry() {
 	cs := a.window.Canvas().Size()
 	a.vv.setTargets([2]int{int(size.Width * sc), int(size.Height * sc)}, [2]int{int(cs.Width * sc), int(cs.Height * sc)})
 	_ = pos
+}
+
+// showText puts a message over the player: the video's banner, or the
+// music screen's (no video there to draw it on).
+func (a *App) showText(text string, d time.Duration) {
+	a.MPV.ShowText(text, d)
+	if a.audioFull {
+		a.au.message(text, d)
+	}
 }
 
 func (a *App) flash(msg string) {

@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"sync"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 )
@@ -11,6 +13,7 @@ import (
 // Text sizes scale too.
 type scaledLayout struct {
 	dw, dh float32
+	mu     sync.Mutex // items: timers in tests call fyne.Do on their own goroutine
 	items  map[fyne.CanvasObject]placement
 
 	scale        float32
@@ -31,40 +34,50 @@ func newScaledLayout(designW, designH int) *scaledLayout {
 
 // place registers obj at design rect r.
 func (l *scaledLayout) place(obj fyne.CanvasObject, r Rect) fyne.CanvasObject {
-	l.items[obj] = placement{r: r}
+	l.put(obj, placement{r: r})
 	return obj
 }
 
 // placeText registers a text at design rect r with design text size.
 func (l *scaledLayout) placeText(t *canvas.Text, r Rect, size float32) *canvas.Text {
-	l.items[t] = placement{r: r, textSize: size}
+	l.put(t, placement{r: r, textSize: size})
 	return t
 }
 
 // placeFull stretches obj over the whole window (background gradients).
 func (l *scaledLayout) placeFull(obj fyne.CanvasObject) fyne.CanvasObject {
-	l.items[obj] = placement{full: true}
+	l.put(obj, placement{full: true})
 	return obj
 }
 
 // move changes the design rect of an already placed object.
 func (l *scaledLayout) move(obj fyne.CanvasObject, r Rect) {
+	l.mu.Lock()
 	p := l.items[obj]
 	p.r = r
 	p.full = false
 	l.items[obj] = p
+	l.mu.Unlock()
 	l.apply(obj, p)
 }
 
 // setFull stretches an already placed object over the whole window.
 func (l *scaledLayout) setFull(obj fyne.CanvasObject) {
+	l.mu.Lock()
 	p := l.items[obj]
 	p.full = true
 	l.items[obj] = p
+	l.mu.Unlock()
 	if l.lastW > 0 {
 		obj.Move(fyne.NewPos(0, 0))
 		obj.Resize(fyne.NewSize(l.lastW, l.lastH))
 	}
+}
+
+func (l *scaledLayout) put(obj fyne.CanvasObject, p placement) {
+	l.mu.Lock()
+	l.items[obj] = p
+	l.mu.Unlock()
 }
 
 func (l *scaledLayout) Layout(objects []fyne.CanvasObject, size fyne.Size) {
@@ -72,7 +85,9 @@ func (l *scaledLayout) Layout(objects []fyne.CanvasObject, size fyne.Size) {
 	l.offX = (size.Width - l.dw*l.scale) / 2
 	l.offY = (size.Height - l.dh*l.scale) / 2
 	for _, o := range objects {
+		l.mu.Lock()
 		p, ok := l.items[o]
+		l.mu.Unlock()
 		if !ok {
 			continue
 		}

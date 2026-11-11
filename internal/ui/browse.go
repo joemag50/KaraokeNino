@@ -65,7 +65,7 @@ type browseScreen struct {
 	queueTitle         *canvas.Text
 	queueNum, queueTxt [queueRows]*canvas.Text
 
-	status, queueInfo *canvas.Text
+	status, queueInfo *keyHint
 	sticky            string
 	statusTimer       *time.Timer
 }
@@ -151,11 +151,11 @@ func newBrowseScreen(a *App) *browseScreen {
 	// Status bar: messages on the left, the queue on the right.
 	sb := statusRect
 	add(s.lay.place(canvas.NewRectangle(pal.Band), sb))
-	s.status = newText("", pal.TextDim, false)
-	add(s.lay.placeText(s.status, Rect{20, sb.Top + 18, 700, 24}, 18))
-	s.queueInfo = newText("", pal.Text, true)
-	s.queueInfo.Alignment = fyne.TextAlignTrailing
-	add(s.lay.placeText(s.queueInfo, Rect{720, sb.Top + 18, 540, 24}, 18))
+	s.status = newKeyHint(pal, Rect{20, sb.Top + 16, 700, 28}, 18, pal.TextDim, fyne.TextAlignLeading)
+	add(s.status.place(s.lay))
+	s.queueInfo = newKeyHint(pal, Rect{720, sb.Top + 16, 540, 28}, 18, pal.Text, fyne.TextAlignTrailing)
+	s.queueInfo.style.Bold = true
+	add(s.queueInfo.place(s.lay))
 	s.progress = newProgressBar(s.lay, pal, progressRect)
 	add(s.progress.bg, s.progress.fill)
 
@@ -168,9 +168,8 @@ func newBrowseScreen(a *App) *browseScreen {
 // ---------- status ----------
 
 func (s *browseScreen) setStatus(msg string) {
-	s.status.Text = fit(msg, 700, 18)
-	s.status.Color = s.pal.Text
-	s.status.Refresh()
+	s.status.setColor(s.pal.Text)
+	s.status.set(msg)
 	if s.statusTimer != nil {
 		s.statusTimer.Stop()
 	}
@@ -180,13 +179,12 @@ func (s *browseScreen) setStatus(msg string) {
 func (s *browseScreen) restoreStatus() {
 	switch {
 	case s.sticky != "":
-		s.status.Text = fit(s.sticky, 700, 18)
-		s.status.Color = s.pal.Accent2
+		s.status.setColor(s.pal.Accent2)
+		s.status.set(s.sticky)
 	default:
-		s.status.Text = "Elige letra → artista → canción  ·  las teclas de la derecha dicen qué hace cada una"
-		s.status.Color = s.pal.TextDim
+		s.status.setColor(s.pal.TextDim)
+		s.status.set("Elige letra → artista → canción  ·  las teclas de la derecha dicen qué hace cada una")
 	}
-	s.status.Refresh()
 }
 
 func (s *browseScreen) setStatusSticky(msg string) {
@@ -205,19 +203,18 @@ func (s *browseScreen) refreshNowPlaying() {
 	cur, q := s.a.box.Snapshot()
 	switch {
 	case cur == nil && len(q) > 0:
-		s.queueInfo.Text = fmt.Sprintf("%d en cola · presiona . para empezar", len(q))
+		s.queueInfo.set(fmt.Sprintf("%d en cola · presiona ", len(q)) + key(".") + " para empezar")
 	case cur == nil:
-		s.queueInfo.Text = "Cola vacía · elige una canción y presiona Intro"
+		s.queueInfo.set("Cola vacía · elige una canción y presiona " + key("Intro"))
 	case cur.Filler:
-		s.queueInfo.Text = "♪ Música de fondo"
+		s.queueInfo.set("♪ Música de fondo")
 	default:
 		txt := fmt.Sprintf("%d en cola", len(q))
 		if len(q) > 0 {
 			txt = "Sigue: " + q[0].Title + "  ·  " + txt
 		}
-		s.queueInfo.Text = fit(txt, 540, 18)
+		s.queueInfo.set(txt)
 	}
-	s.queueInfo.Refresh()
 	s.refreshQueue()
 	s.refreshPreview()
 	s.a.updateKeypad()
@@ -353,13 +350,6 @@ func (a *App) coverFor(folder, cover string) string {
 
 // ---------- data ----------
 
-func (a *App) currentGenre() catalog.Genre {
-	if a.genreIdx < 0 || a.genreIdx >= len(a.genres) {
-		return catalog.Genre{}
-	}
-	return a.genres[a.genreIdx]
-}
-
 func (a *App) currentLetter() string {
 	if a.letterIdx < 0 || a.letterIdx >= len(a.letters) {
 		return ""
@@ -387,13 +377,6 @@ func (a *App) loadGenres() error {
 			return a.loadGenres()
 		}
 	}
-	a.genreIdx = 0
-	for i, g := range a.genres {
-		if strings.Contains(strings.ToUpper(g.Name), "KARAOKE") && (a.mode == catalog.KindKaraoke || a.mode == catalog.KindAll) {
-			a.genreIdx = i
-			break
-		}
-	}
 	a.focus = colLetters
 	if err := a.loadLetters(""); err != nil {
 		return err
@@ -407,12 +390,12 @@ func (a *App) loadGenres() error {
 	return nil
 }
 
-// loadLetters fills the letter column of the current genre, keeping letter if possible.
+// loadLetters fills the letter column (every visible genre in one list),
+// keeping letter if possible.
 func (a *App) loadLetters(keep string) error {
-	g := a.currentGenre()
 	a.letters = nil
-	if g.ID != 0 {
-		ls, err := a.Store.Letters(a.ctx, g.ID, a.mode)
+	if len(a.genres) > 0 {
+		ls, err := a.Store.Letters(a.ctx, a.genreIDs(), a.mode)
 		if err != nil {
 			return err
 		}
@@ -436,7 +419,7 @@ func (a *App) loadLetters(keep string) error {
 func (a *App) loadArtists(sel int) error {
 	a.artists = nil
 	if l := a.currentLetter(); l != "" {
-		as, err := a.Store.ArtistsByLetter(a.ctx, a.currentGenre().ID, a.mode, l)
+		as, err := a.Store.ArtistsByLetter(a.ctx, a.genreIDs(), a.mode, l)
 		if err != nil {
 			return err
 		}
@@ -460,7 +443,7 @@ func (a *App) loadArtists(sel int) error {
 func (a *App) loadTracks(sel int) error {
 	a.tracks = nil
 	if ar, ok := a.selectedArtist(); ok {
-		ts, err := a.Store.Tracks(a.ctx, ar.ID, a.mode)
+		ts, err := a.Store.TracksOf(a.ctx, ar.IDs, a.mode)
 		if err != nil {
 			return err
 		}
@@ -510,10 +493,13 @@ func (a *App) refreshArtists() {
 
 func (a *App) renderHeader() {
 	s := a.scr
-	g := a.currentGenre()
-	s.genre.Text = strings.ToUpper(modeName(a.mode)) + "  ·  " + g.Name
+	s.genre.Text = strings.ToUpper(modeName(a.mode))
 	s.genre.Refresh()
-	s.genreInfo.Text = fmt.Sprintf("género %d de %d", a.genreIdx+1, max(len(a.genres), 1))
+	n := 0
+	for _, l := range a.letters {
+		n += l.Count
+	}
+	s.genreInfo.Text = fmt.Sprintf("%d artistas", n)
 	s.genreInfo.Refresh()
 }
 
@@ -551,7 +537,7 @@ func (a *App) updateKeypad() {
 		return
 	}
 	labels := map[string]string{
-		"next": "Saltar", "genres": "Género", "volume_up": "Vol +", "volume_down": "Vol −",
+		"next": "Saltar", "volume_up": "Vol +", "volume_down": "Vol −",
 		"pause": "Pausa", "playlist": "Cola", "abc": "Número", "reset": "Modo", "top": "Top",
 		"page_up": "Pág ↑", "page_down": "Pág ↓",
 	}
@@ -654,16 +640,6 @@ func stepIdx(i, d, n int, page bool) int {
 	return ((i+d)%n + n) % n
 }
 
-func (a *App) nextGenre() {
-	if len(a.genres) == 0 {
-		return
-	}
-	a.genreIdx = (a.genreIdx + 1) % len(a.genres)
-	a.focus = colLetters
-	_ = a.loadLetters(a.currentLetter())
-	a.flash("Género: " + a.currentGenre().Name)
-}
-
 // showTrack moves the browser to a song (from the search or "lo más pedido").
 func (a *App) showTrack(t catalog.Track) {
 	if a.mode != catalog.KindAll && t.Kind != a.mode {
@@ -674,14 +650,13 @@ func (a *App) showTrack(t catalog.Track) {
 	if err != nil {
 		return
 	}
-	for gi, g := range a.genres {
+	for _, g := range a.genres {
 		if g.ID != ar.GenreID {
 			continue
 		}
-		a.genreIdx = gi
 		_ = a.loadLetters(catalog.LetterOf(catalog.SortKey(ar.Name)))
 		for i, x := range a.artists {
-			if x.ID == ar.ID {
+			if x.HasID(ar.ID) {
 				a.artistIdx = i
 				a.scr.artists.selectIdx(i)
 				_ = a.loadTracks(0)

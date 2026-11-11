@@ -260,8 +260,9 @@ func (a *App) openModes() {
 		add(lay.placeText(n, Rect{Left: r.Left, Top: r.Top + 240, Width: r.Width, Height: 30}, 24))
 		co = append(co, cardObjs{bg, band, t, r})
 	}
-	hint := cx(newText("4 / 6  elegir   ·   Intro  entrar   ·   1  volver a esta pantalla", pal.TextDim, false))
-	add(lay.placeText(hint, Rect{Top: dh - 70, Width: dw, Height: 28}, 20))
+	hint := newKeyHint(pal, Rect{Top: dh - 72, Width: dw, Height: 32}, 20, pal.TextDim, fyne.TextAlignCenter)
+	hint.set(key("4") + key("6") + " elegir   ·   " + key("Intro") + " entrar   ·   " + key("1") + " volver a esta pantalla")
+	add(hint.place(lay))
 
 	sel := 0
 	for i, c := range cards {
@@ -306,7 +307,7 @@ func (a *App) openModes() {
 		switch action {
 		case "left", "up":
 			sel = (sel - 1 + len(cards)) % len(cards)
-		case "right", "down", "genres":
+		case "right", "down":
 			sel = (sel + 1) % len(cards)
 		case "ok":
 			a.closeLayer()
@@ -326,7 +327,7 @@ func (a *App) setMode(k catalog.Kind) {
 		a.flash(err.Error())
 		return
 	}
-	a.flash(modeName(k) + " · 1 para cambiar")
+	a.flash(modeName(k) + " · " + key("1") + " para cambiar")
 }
 
 func modeName(k catalog.Kind) string {

@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"time"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
@@ -19,7 +21,10 @@ type audioView struct {
 	cover            *canvas.Image
 	initials         *canvas.Text
 	title, artist    *canvas.Text
-	next, hint       *canvas.Text
+	next             *canvas.Text
+	hint             *keyHint
+	osd              *keyHint // volume / pause banner
+	hideOSD          *time.Timer
 	progress         *progressBar
 	folder, coverRel string // the cover shown (for refreshCover)
 	name             string
@@ -62,8 +67,10 @@ func newAudioView(a *App) *audioView {
 	center(v.artist, Rect{40, 540, designW - 80, 34}, 26)
 	v.next = newText("", pal.TextDim, true)
 	center(v.next, Rect{40, 590, designW - 80, 30}, 22)
-	v.hint = newText("7  ver la lista y pedir otra canción  ·  + − volumen  ·  * pausa  ·  . .  saltar", pal.TextDim, false)
-	center(v.hint, Rect{40, 640, designW - 80, 26}, 18)
+	v.hint = newKeyHint(pal, Rect{40, 638, designW - 80, 30}, 18, pal.TextDim, fyne.TextAlignCenter)
+	v.hint.set(fullHint)
+	v.osd = newKeyHint(pal, Rect{40, 4, designW - 80, 42}, 30, pal.Accent2, fyne.TextAlignCenter)
+	objs = append(objs, v.hint.place(v.lay), v.osd.place(v.lay))
 
 	v.progress = newProgressBar(v.lay, pal, Rect{140, 686, designW - 280, 8})
 	objs = append(objs, v.progress.bg, v.progress.fill)
@@ -115,6 +122,19 @@ func (v *audioView) show(on bool) {
 	} else {
 		v.root.Hide()
 	}
+}
+
+// message shows a banner (volume, pause) above the cover for d.
+func (v *audioView) message(text string, d time.Duration) {
+	v.osd.set(firstLine(text))
+	if v.hideOSD != nil {
+		v.hideOSD.Stop()
+	}
+	v.hideOSD = time.AfterFunc(d, func() {
+		fyne.Do(func() {
+			v.osd.set("")
+		})
+	})
 }
 
 func (v *audioView) setNext(text string) {
